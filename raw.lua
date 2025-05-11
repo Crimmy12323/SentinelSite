@@ -1,29 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" href="https://cdn.discordapp.com/icons/1170154946100990062/728776ab85fc175577e4c1c986be3895.png?size=512">
-  <style>
-    body {
-      background-color: #000000;
-      color: #FFFFFF;
-      padding: 20px;
-      margin: 0;
-      font-family: monospace;
-    }
-    pre {
-      background-color: #111111;
-      padding: 20px;
-      border-radius: 5px;
-      overflow: auto;
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Display the Lua code in a preformatted block -->
-  <pre>
     ([[This file was protected with MoonSec V3]]):gsub('.+', (function(a) __EiCsKdtIRJg = a; end)); return(function(f,...)local n;local h;local t;local o;local d;local l;local e=24915;local _=0;local j={};while _<167 do _=_+1;while _<0x158 and
 e%0x35a4<0x1ad2 do _=_+1 e=(e-232)%24837 local r=_+e if(e%0x267a)<0x133d then e=(e+0x367)%0x5471 while _<0x336 and e%0x433e<0x219f do _=_+1 e=(e-224)%33746 local d=_+e if(e%0x2946)>0x14a3 then e=(e*0x19e)%0xb7ce local e=56998 if not j[e]then
 j[e]=0x1 t=string;end elseif e%2~=0 then e=(e*0x1ab)%0x60b local e=65218 if not j[e]then j[e]=0x1 n=getfenv and getfenv();end else e=(e*0x2cc)%0x8645 _=_+1 local e=3368 if not j[e]then j[e]=0x1 h={};end end end elseif e%2~=0 then e=(e*0x15b)%0xc0de
@@ -1475,7 +1449,3 @@ e=(j/2^(e-1))%2^((_-1)-(e-1)+1);return e-e%1;else local e=2^(e-1);return(j%(e+e)
 e=(_/2^(e-1))%2^((j-1)-(e-1)+1);return e-e%1;else local e=2^(e-1);return(_%(e+e)>=e)and 1 or 0;end;end;end;end end else if 5>=_ then if _==5 then local _=n;do return function()local e=e(j,_(_,_),_(_,_));_(1);return e;end;end;else local _=n;local
 l,f,t=d(2);do return function()local n,j,e,d=e(j,_(_,_),_(_,_)+3);_(4);return(d*l)+(e*f)+(j*t)+n;end;end;end else if _<7 then do return d[j]end;else if _>=4 then for e=34,67 do if _~=7 then do return j(_,nil,j);end break;end;do return
 setmetatable({},{['__\99\97\108\108']=function(e,n,j,d,_)if _ then return e[_]elseif d then return e else e[n]=j end end})end break;end;else do return j(_,nil,j);end end end end end end),...)
-  </pre>
-
-</body>
-</html>
