@@ -70,7 +70,7 @@
       transition: transform 0.3s, box-shadow 0.3s;
     }
     .card:hover {
-      transform: translateY(-6px);
+      transform: translateY(-10px);
       box-shadow: 0 20px 30px rgba(0,0,0,0.5);
     }
 
@@ -101,14 +101,14 @@
       margin-top: 15px;
       position: relative;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow to simulate "hover" */
-      white-space: nowrap; /* Prevent horizontal scrolling */
-      overflow-x: hidden; /* Hide horizontal scrollbar */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      white-space: nowrap;
+      overflow-x: hidden;
     }
 
     pre:hover {
-      transform: scale(1.03); /* Slightly less scale effect */
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5); /* Slightly stronger shadow on hover */
+      transform: scale(1.03);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
     }
 
     pre::before {
@@ -167,14 +167,12 @@
       .logo { width: 60px; height: 60px; }
     }
 
-    /* Remove font change on hover */
     .discord-button, .copy-button, pre, h1, .logo, .card {
       font-family: 'Poppins', sans-serif !important;
     }
 
-    /* Custom Scrollbar */
     ::-webkit-scrollbar {
-      width: 8px; /* Thinner scrollbar */
+      width: 8px;
       background-color: #2A3D66;
     }
 
@@ -191,6 +189,12 @@
     ::-webkit-scrollbar-track {
       background-color: #1C2526;
       border-radius: 6px;
+    }
+
+    a {
+      color: #4A90E2;
+      text-decoration: underline;
+      font-weight: 500;
     }
 
   </style>
@@ -212,6 +216,7 @@
         </button>
       </div>
       <pre><code id="scriptCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/Crimmy12323/Mic-Up/refs/heads/main/micupscript"))()</code></pre>
+      <p style="margin-top: 15px;"><a href="lua-script.html">View Lua Script</a></p>
     </div>
   </div>
 
