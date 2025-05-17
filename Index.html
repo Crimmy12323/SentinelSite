@@ -6,8 +6,8 @@
   <title>Sentinel</title>
   <meta property="og:title" content="Sentinel">
   <meta property="og:description" content="Sentinel is a powerful and user-friendly script for Mic Up.">
-  <meta property="og:image" content="https://cdn.discordapp.com/icons/1365110139606270023/b51042495cb4b6012ae1a0101ea4c062.webp?size=512">
-  <link rel="icon" id="favicon" href="https://cdn.discordapp.com/icons/1365110139606270023/b51042495cb4b6012ae1a0101ea4c062.webp?size=512">
+  <meta property="og:image" content="https://cdn.discordapp.com/icons/1170154946100990062/728776ab85fc175577e4c1c986be3895.png?size=512">
+  <link rel="icon" id="favicon" href="https://cdn.discordapp.com/icons/1170154946100990062/728776ab85fc175577e4c1c986be3895.png?size=512">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -201,16 +201,52 @@
       text-decoration: underline;
       font-weight: 500;
     }
+    .faq-section {
+      margin-top: 50px;
+      width: 100%;
+      text-align: left;
+    }
+    .faq-title {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-align: center;
+      background: linear-gradient(135deg, #4A90E2, #007BFF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .faq-item {
+      background: rgba(30,35,50,0.7);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-left: 4px solid #4A90E2;
+      transition: all 0.3s ease;
+    }
+    .faq-item:hover {
+      background: rgba(40,45,60,0.8);
+      transform: translateX(5px);
+    }
+    .faq-question {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    .faq-answer {
+      color: #ccc;
+      line-height: 1.6;
+    }
     @media (max-width: 600px) {
       h1 { font-size: 2rem; }
       .logo { width: 60px; height: 60px; }
+      .faq-title { font-size: 1.5rem; }
     }
   </style>
 </head>
 <body>
   <div class="stars"></div>
   <div class="container">
-    <img class="logo" id="serverIcon" src="https://cdn.discordapp.com/icons/1365110139606270023/b51042495cb4b6012ae1a0101ea4c062.webp?size=512" alt="Sentinel" onclick="window.open('https://discord.gg/WxczCDGSFc','_blank')">
+    <img class="logo" id="serverIcon" src="https://cdn.discordapp.com/icons/1170154946100990062/728776ab85fc175577e4c1c986be3895.png" alt="Sentinel" onclick="window.open('https://discord.gg/WxczCDGSFc','_blank')">
     <h1>Welcome to <span class="highlight">Sentinel</span></h1>
     <p class="description">A powerful script for Mic Up with advanced features and reliable performance.</p>
     <p id="memberCount">3,000+ Members</p>
@@ -230,10 +266,32 @@
           <i class="far fa-check-circle" style="color:#4CAF50;"></i> Copy
         </button>
       </div>
-      <pre><code id="scriptCode">-- Made by @fuckluau
-loadstring(game:HttpGet("https://sentinelxyz.netlify.app/raw.lua"))()</code></pre>
-      <p style="margin-top: 15px;"><a href="raw.lua">View Lua Script</a></p>
+      <pre><code id="scriptCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/Crimmy12323/Mic-Up/refs/heads/main/micupscript"))()</code></pre>
+      <p style="margin-top: 15px;"><a href="raw.html">View Lua Script</a></p>
     </div>
+<div class="faq-section">
+  <h2 class="faq-title">Frequently Asked Questions</h2>
+  <div class="faq-item">
+    <div class="faq-question">What games does Sentinel support?</div>
+    <div class="faq-answer">Sentinel is specifically designed for Mic Up on Roblox, with optimized features that enhance your experience in this game. It doesn't support other games as it's tailored for Mic Up's unique mechanics.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-question">Is Sentinel safe to use?</div>
+    <div class="faq-answer">Yes! Sentinel uses secure, optimized Lua code that won't compromise your account. We regularly update the script to ensure safety and performance. However, always use scripts at your own discretion.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-question">Which executors are compatible with Sentinel?</div>
+    <div class="faq-answer">Sentinel works with modern executors including Velocity, Delta, Swift etc. For best performance, we recommend using Velocity or Swift.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-question">How often is Sentinel updated?</div>
+    <div class="faq-answer">We update Sentinel frequently to add new features, fix bugs, and ensure compatibility with the latest updates of Mic Up..</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-question">What features does Sentinel offer for Mic Up?</div>
+    <div class="faq-answer">Sentinel includes Reanimation, Voice Chat Unban, Free Emotes, Teleports, Snake Mode, and many other premium features to enhance your Mic Up experience.</div>
+  </div>
+</div>
     <footer>
       &copy; 2025 Sentinel. Made for Mic Up | <a href="https://discord.gg/WxczCDGSFc">Join Us</a>
     </footer>
@@ -262,7 +320,6 @@ loadstring(game:HttpGet("https://sentinelxyz.netlify.app/raw.lua"))()</code></pr
     }
     window.onload = updateDiscordInfo;
 
-    // ===== Cursor trailing dot script =====
     (() => {
       const dot = document.createElement('div');
       dot.id = 'cursorDot';
