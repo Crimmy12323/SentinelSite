@@ -14,18 +14,31 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #1C2526, #2A3D66);
+      background: radial-gradient(circle at top left, #1C2526, #2A3D66);
       color: white;
       padding: 40px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      overflow-y: scroll;
+      overflow-x: hidden;
     }
-
-    .container { max-width: 1000px; width: 100%; text-align: center; }
-
+    .stars {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-image: radial-gradient(white 1px, transparent 1px);
+      background-size: 50px 50px;
+      opacity: 0.05;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .container {
+      max-width: 1000px;
+      width: 100%;
+      text-align: center;
+      z-index: 1;
+    }
     .logo {
       width: 80px;
       height: 80px;
@@ -37,13 +50,16 @@
       transform: scale(1.05);
       box-shadow: 0 0 10px rgba(255,255,255,0.15);
     }
-
     h1 {
       font-size: 2.5rem;
       font-weight: 700;
-      margin: 20px 0;
+      margin: 20px 0 10px;
     }
-
+    p.description {
+      color: #ccc;
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+    }
     .highlight {
       background: linear-gradient(135deg, #4A90E2, #007BFF);
       background-size: 200% 200%;
@@ -51,14 +67,54 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       animation: gradientShift 10s ease infinite;
+      text-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
     }
-
     @keyframes gradientShift {
       0% { background-position: right center; }
       50% { background-position: left center; }
       100% { background-position: right center; }
     }
-
+    .discord-button {
+      background: linear-gradient(135deg, #5865F2, #4A90E2);
+      color: white;
+      font-weight: 600;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(88,101,242,0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .discord-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 20px rgba(88,101,242,0.6);
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .feature {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+    }
+    .feature:hover {
+      transform: translateY(-5px);
+    }
+    .feature i {
+      font-size: 2rem;
+      color: #4A90E2;
+      margin-bottom: 10px;
+    }
     .card {
       background: rgba(30,35,50,0.9);
       border: 1px solid rgba(255,255,255,0.1);
@@ -73,44 +129,19 @@
       transform: translateY(-10px);
       box-shadow: 0 20px 30px rgba(0,0,0,0.5);
     }
-
-    .discord-button {
-      background: linear-gradient(135deg, #5865F2, #4A90E2);
-      color: white;
-      font-weight: 600;
-      border: none;
-      padding: 12px 25px;
-      border-radius: 30px;
-      cursor: pointer;
-      box-shadow: 0 6px 14px rgba(88,101,242,0.4);
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
-    .discord-button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 10px 20px rgba(88,101,242,0.6);
-    }
-
     pre {
       background: rgba(20,25,40,0.97);
       padding: 20px;
       border-radius: 12px;
-      overflow: auto;
       margin-top: 15px;
       position: relative;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      white-space: nowrap;
-      overflow-x: hidden;
+      max-width: 100%;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
-
-    pre:hover {
-      transform: scale(1.03);
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
-    }
-
     pre::before {
       content: '';
       position: absolute;
@@ -124,12 +155,10 @@
       animation: moveGlow 4s linear infinite;
       border-radius: 999px;
     }
-
     @keyframes moveGlow {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
-
     code {
       font-family: 'Fira Code', monospace;
       font-size: 1rem;
@@ -139,8 +168,9 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       animation: gradientShift 10s ease infinite;
+      word-break: break-word;
+      white-space: pre-wrap;
     }
-
     .copy-button {
       background: linear-gradient(90deg, #4A90E2, #007BFF);
       background-size: 200% 200%;
@@ -155,59 +185,44 @@
       align-items: center;
       gap: 8px;
       transition: transform 0.3s, box-shadow 0.3s;
-      box-shadow: 0 4px 10px rgba(74,144,226,0.3);
     }
     .copy-button:hover {
       transform: scale(1.07);
       box-shadow: 0 8px 20px rgba(0,123,255,0.5);
     }
-
-    @media (max-width: 600px) {
-      h1 { font-size: 2rem; }
-      .logo { width: 60px; height: 60px; }
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #aaa;
     }
-
-    .discord-button, .copy-button, pre, h1, .logo, .card {
-      font-family: 'Poppins', sans-serif !important;
-    }
-
-    ::-webkit-scrollbar {
-      width: 8px;
-      background-color: #2A3D66;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background-color: #007BFF;
-      border-radius: 6px;
-      transition: background-color 0.3s;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background-color: #4A90E2;
-    }
-
-    ::-webkit-scrollbar-track {
-      background-color: #1C2526;
-      border-radius: 6px;
-    }
-
     a {
       color: #4A90E2;
       text-decoration: underline;
       font-weight: 500;
     }
-
+    @media (max-width: 600px) {
+      h1 { font-size: 2rem; }
+      .logo { width: 60px; height: 60px; }
+    }
   </style>
 </head>
 <body>
+  <div class="stars"></div>
   <div class="container">
     <img class="logo" id="serverIcon" src="https://cdn.discordapp.com/icons/1170154946100990062/728776ab85fc175577e4c1c986be3895.png" alt="Sentinel" onclick="window.open('https://discord.gg/WxczCDGSFc','_blank')">
     <h1>Welcome to <span class="highlight">Sentinel</span></h1>
+    <p class="description">A powerful script for Mic Up with advanced features and reliable performance.</p>
     <p id="memberCount">3,000+ Members</p>
     <button class="discord-button" onclick="window.open('https://discord.gg/WxczCDGSFc', '_blank')">
       <i class="fab fa-discord"></i> Join Server
     </button>
-
+    <div class="features">
+      <div class="feature"><i class="fas fa-bolt"></i><p>Stable</p></div>
+      <div class="feature"><i class="fas fa-shield-alt"></i><p>Error-Free Execution</p></div>
+      <div class="feature"><i class="fas fa-code"></i><p>Optimized Lua Code</p></div>
+      <div class="feature"><i class="fas fa-users"></i><p>Active Community</p></div>
+    </div>
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Sentinel Script</h2>
@@ -218,8 +233,10 @@
       <pre><code id="scriptCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/Crimmy12323/Mic-Up/refs/heads/main/micupscript"))()</code></pre>
       <p style="margin-top: 15px;"><a href="raw.html">View Lua Script</a></p>
     </div>
+    <footer>
+      &copy; 2025 Sentinel. Made for Mic Up | <a href="https://discord.gg/WxczCDGSFc">Join Us</a>
+    </footer>
   </div>
-
   <script>
     async function updateDiscordInfo() {
       try {
@@ -234,7 +251,6 @@
         document.getElementById("memberCount").textContent = "Join";
       }
     }
-
     function copyScript(button) {
       const text = document.getElementById("scriptCode").textContent;
       navigator.clipboard.writeText(text).then(() => {
@@ -243,8 +259,52 @@
         setTimeout(() => { button.innerHTML = original; }, 2500);
       });
     }
-
     window.onload = updateDiscordInfo;
+
+    // ===== Cursor trailing dot script =====
+    (() => {
+      const dot = document.createElement('div');
+      dot.id = 'cursorDot';
+      document.body.appendChild(dot);
+
+      Object.assign(dot.style, {
+        position: 'fixed',
+        top: '0px',
+        left: '0px',
+        width: '12px',
+        height: '12px',
+        background: '#4A90E2',
+        borderRadius: '50%',
+        pointerEvents: 'none',
+        transform: 'translate(-50%, -50%)',
+        mixBlendMode: 'screen',
+        opacity: '0.85',
+        zIndex: '9999',
+        transition: 'top 0.1s ease, left 0.1s ease',
+      });
+
+      let mouseX = window.innerWidth / 2;
+      let mouseY = window.innerHeight / 2;
+      let dotX = mouseX;
+      let dotY = mouseY;
+
+      window.addEventListener('mousemove', e => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+
+      function animate() {
+        dotX += (mouseX - dotX) * 0.15;
+        dotY += (mouseY - dotY) * 0.15;
+
+        dot.style.left = dotX + 'px';
+        dot.style.top = dotY + 'px';
+
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    })();
   </script>
 </body>
 </html>
