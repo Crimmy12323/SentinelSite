@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
+-- [[ State for reanimation ]]
 local ghostEnabled = false
 local originalCharacter
 local ghostClone
@@ -26,6 +27,7 @@ local bodyParts = {
     "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
 
+-- [[ Adjusts the clone so its lowest part is on the ground ]]
 local function adjustCloneToGround(clone)
     if not clone then return end
     local lowestY = math.huge
@@ -47,6 +49,7 @@ local function adjustCloneToGround(clone)
     end
 end
 
+-- [[ Prevent GUI loss on respawn ]]
 local preservedGuis = {}
 local function preserveGuis()
     local playerGui = LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
@@ -69,6 +72,7 @@ local function restoreGuis()
     table.clear(preservedGuis)
 end
 
+-- [[ Update clone scale for size/width sliders ]]
 local function updateCloneScale()
     if not ghostClone then return end
     for part, origSize in pairs(ghostOriginalSizes) do
@@ -103,6 +107,7 @@ local function updateCloneScale()
     adjustCloneToGround(ghostClone)
 end
 
+-- [[ Copy ragdoll part positions from clone to original ]]
 local function updateRagdolledParts()
     if not ghostEnabled or not originalCharacter or not ghostClone then return end
     for _, partName in ipairs(bodyParts) do
@@ -116,6 +121,7 @@ local function updateRagdolledParts()
     end
 end
 
+-- [[ Main function to enable/disable ghost reanimation ]]
 local function setGhostEnabled(newState)
     ghostEnabled = newState
 
@@ -156,6 +162,7 @@ local function setGhostEnabled(newState)
             end
         end
 
+        -- [[ Make clone invisible ]]
         for _, part in ipairs(ghostClone:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.Transparency = 1
@@ -170,6 +177,7 @@ local function setGhostEnabled(newState)
             end
         end
 
+        -- [[ Store original sizes and motor CFrames for scaling ]]
         ghostOriginalSizes = {}
         ghostOriginalMotorCFrames = {}
         for _, desc in ipairs(ghostClone:GetDescendants()) do
@@ -206,6 +214,7 @@ local function setGhostEnabled(newState)
             originalAnimateScript.Disabled = false
         end
 
+        -- [[ Start ragdoll sync ]]
         task.delay(0, function()
             if not ghostEnabled then return end
             ReplicatedStorage.RagdollEvent:FireServer()
@@ -243,6 +252,8 @@ local function setGhostEnabled(newState)
 
         if origRoot then
             origRoot.CFrame = targetCFrame
+            origRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            origRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         end
 
         local origHumanoid = originalCharacter:FindFirstChildWhichIsA("Humanoid")
@@ -250,6 +261,19 @@ local function setGhostEnabled(newState)
         LocalPlayer.Character = originalCharacter
         if origHumanoid then
             Workspace.CurrentCamera.CameraSubject = origHumanoid
+            origHumanoid.PlatformStand = false
+            origHumanoid:ChangeState(Enum.HumanoidStateType.Running)
+            origHumanoid.Sit = false
+            origHumanoid.Jump = true
+            task.wait(0.03)
+            origHumanoid.Jump = false
+            -- Reset all part velocities
+            for _, part in ipairs(originalCharacter:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                end
+            end
         end
         restoreGuis()
 
@@ -263,6 +287,7 @@ local function setGhostEnabled(newState)
     end
 end
 
+-- [[ Animation playback logic (fake animation system) ]]
 local fakeAnimStop
 local fakeAnimRunning = false
 fakeAnimStop = false
@@ -292,6 +317,7 @@ local function stopFakeAnimation()
     end
 end
 
+-- [[ Play a fake animation on the ghost clone using keyframes ]]
 local function playFakeAnimation(animationId)
     if not ghostClone then
         warn("No fake character available!")
@@ -300,8 +326,10 @@ local function playFakeAnimation(animationId)
     if animationId == "" then return end
     if fakeAnimRunning then
         stopFakeAnimation()
+        task.wait(0.01)
+        stopFakeAnimation()
     end
-    wait(0.1)
+    wait(0.02)
     cloneSize = 1
     cloneWidth = 1
     updateCloneScale()
@@ -358,10 +386,11 @@ local function playFakeAnimation(animationId)
     fakeAnimStop = false
     fakeAnimRunning = true
     
+    -- [[ PlatformStand trick to prevent physics glitches ]]
     local part = Instance.new("Part")
     part.Size = Vector3.new(2048,0.1,2048)
     part.Anchored = true
-    part.Position = game.Players.LocalPlayer.Character.LowerTorso.Position + Vector3.new(0,-0.2,0)
+    part.Position = game.Players.LocalPlayer.Character.LowerTorso.Position + Vector3.new(0,-0.527,0)
     part.Transparency = 1
     part.Parent = workspace
     game.Players.LocalPlayer.Character.Humanoid.PlatformStand = true
@@ -375,62 +404,67 @@ local function playFakeAnimation(animationId)
     part:Destroy()
     spawn(function()
         while fakeAnimRunning do
-        if fakeAnimStop then
-            fakeAnimRunning = false
-            break
-        end
-
-        pcall(function()
-            local keyframes = NeededAssets:GetKeyframes()
-            for ii = 1, #keyframes do
-            if fakeAnimStop then break end
-
-            local currentFrame = keyframes[ii]
-            local nextFrame = keyframes[ii + 1] or keyframes[1]
-            local currentTime = currentFrame.Time
-            local nextTime = nextFrame.Time
-            if nextTime <= currentTime then
-                nextTime = nextTime + NeededAssets.Length
+            if fakeAnimStop then
+                fakeAnimRunning = false
+                break
             end
 
-            local frameLength = (nextTime - currentTime) / fakeAnimSpeed
-            local startTime = tick()
-            
-            while tick() - startTime < frameLength and not fakeAnimStop do
-                local alpha = (tick() - startTime) / frameLength
-                
-                pcall(function()
-                for _, currentPose in pairs(currentFrame:GetDescendants()) do
-                    local nextPose = nextFrame:FindFirstChild(currentPose.Name, true)
-                    local motor = Joints[currentPose.Name]
-                    
-                    if motor and nextPose and ghostOriginalMotorCFrames[motor] then
-                    local currentCF = ghostOriginalMotorCFrames[motor].C0 * currentPose.CFrame
-                    local nextCF = ghostOriginalMotorCFrames[motor].C0 * nextPose.CFrame
-                    motor.C0 = currentCF:Lerp(nextCF, alpha)
+            pcall(function()
+                local keyframes = NeededAssets:GetKeyframes()
+                for ii = 1, #keyframes do
+                    if fakeAnimStop then break end
+
+                    local currentFrame = keyframes[ii]
+                    local nextFrame = keyframes[ii + 1] or keyframes[1]
+                    local currentTime = currentFrame.Time
+                    local nextTime = nextFrame.Time
+                    if nextTime <= currentTime then
+                        nextTime = nextTime + NeededAssets.Length
+                    end
+
+                    local frameLength = (nextTime - currentTime) / fakeAnimSpeed
+                    local startTime = os.clock()
+                    local endTime = startTime + frameLength
+
+                    while os.clock() < endTime and not fakeAnimStop do
+                        local now = os.clock()
+                        local alpha = math.clamp((now - startTime) / frameLength, 0, 1)
+
+                        pcall(function()
+                            for _, currentPose in pairs(currentFrame:GetDescendants()) do
+                                local nextPose = nextFrame:FindFirstChild(currentPose.Name, true)
+                                local motor = Joints[currentPose.Name]
+
+                                if motor and nextPose and ghostOriginalMotorCFrames[motor] then
+                                    local currentCF = ghostOriginalMotorCFrames[motor].C0 * currentPose.CFrame
+                                    local nextCF = ghostOriginalMotorCFrames[motor].C0 * nextPose.CFrame
+                                    motor.C0 = currentCF:Lerp(nextCF, alpha)
+                                end
+                            end
+                        end)
+                        RunService.Heartbeat:Wait()
                     end
                 end
-                end)
-                
-                RunService.RenderStepped:Wait()
-            end
-            end
-        end)
-        
-        task.wait(0.03)
+            end)
+
+            task.wait(0.03)
         end
     end)
-end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
 
     if input.KeyCode == Enum.KeyCode.R then
         stopFakeAnimation()
+        task.wait(0.01)
+        stopFakeAnimation()
         return
     end
 end)
 
+end
+
+-- [[ Listen for character respawn and cleanup ghost if needed ]]
 LocalPlayer = Players.LocalPlayer
 
 LocalPlayer.CharacterAdded:Connect(function(character)
@@ -449,6 +483,7 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     end
 end)
 
+-- [[ GUI Logic]]
 local G2L = {};
 
 G2L["1"] = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"))
@@ -521,6 +556,60 @@ closeButton.MouseButton1Click:Connect(function()
         setGhostEnabled(false)
         G2L["1b"].Text = "Enable R15 Reanimation"
         G2L["1b"].TextColor3 = Color3.fromRGB(207, 207, 207)
+    end
+    G2L["1"]:Destroy()
+end)
+
+local minimizeButton = Instance.new("ImageButton")
+minimizeButton.Name = "MinimizeButton"
+minimizeButton.Size = UDim2.new(0, 24, 0, 34)
+minimizeButton.Position = UDim2.new(1, -48, 0.72, -12)
+minimizeButton.AnchorPoint = Vector2.new(1, 0.5)
+minimizeButton.BackgroundTransparency = 1
+minimizeButton.Image = "rbxassetid://15396333997"
+minimizeButton.Parent = G2L["4"]
+
+minimizeButton.MouseEnter:Connect(function()
+    minimizeButton.Image = "rbxassetid://15396333997"
+    TweenService:Create(minimizeButton, TweenInfo.new(0.2), {
+        ImageColor3 = Color3.fromRGB(57, 190, 249)
+    }):Play()
+end)
+
+minimizeButton.MouseLeave:Connect(function()
+    minimizeButton.Image = "rbxassetid://15396333997"
+    TweenService:Create(minimizeButton, TweenInfo.new(0.2), {
+        ImageColor3 = Color3.fromRGB(255, 255, 255)
+    }):Play()
+end)
+
+local isMinimized = false
+local originalSize = G2L["2"].Size
+local topBar = G2L["4"]
+
+local function toggleMinimize()
+    isMinimized = not isMinimized
+
+    for _, child in ipairs(G2L["2"]:GetChildren()) do
+        if child ~= topBar and child:IsA("GuiObject") then
+            child.Visible = not isMinimized
+        end
+    end
+
+    local targetSize = isMinimized
+        and UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 51)
+        or originalSize
+
+    TweenService:Create(G2L["2"], TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+        Size = targetSize
+    }):Play()
+end
+
+minimizeButton.MouseButton1Click:Connect(toggleMinimize)
+
+closeButton.MouseButton1Click:Connect(function()
+    if ghostEnabled then
+        setGhostEnabled(false)
     end
     G2L["1"]:Destroy()
 end)
@@ -805,6 +894,10 @@ if G2L["1b"].Text:lower() == "disable r15 reanimation" then
     G2L["1b"].TextColor3 = Color3.fromRGB(171, 27, 27)
 end
 
+if G2L["1b"].Text:lower() == "enable r15 reanimation" then
+    G2L["1b"].TextColor3 = Color3.fromRGB(207, 207, 207)
+end
+
 G2L["1c"].MouseButton1Click:Connect(function()
     if ghostEnabled then
         setGhostEnabled(false)
@@ -828,11 +921,15 @@ local function toggleFakeAnimation(animationId)
 
     if currentPlayingAnimation == animationId then
         stopFakeAnimation()
+        task.wait(0.01)
+        stopFakeAnimation()
         currentPlayingAnimation = nil
         return
     end
 
     if currentPlayingAnimation then
+        stopFakeAnimation()
+        task.wait(0.01)
         stopFakeAnimation()
     end
 
@@ -1186,6 +1283,11 @@ local function addButtonsToFrame()
         {"Give Head (Goofy Edition)", "118753756727960", false},
         {"Twerk On The Floor", "97412783228774", false},
         {"Scissoring", "135771690782346", false},
+        {"Assumptions", "98653233606495", true},
+        {"Assumptions R15", "100885689396978", false},
+        {"Big Swastika", "94631359696320", false},
+        {"Distraction Dance", "100885689396978", false},
+        {"Peanut Butter JT", "71347001855728", true},
         {"Fat Shit", "118865365595523", false}
     }
 
@@ -1346,7 +1448,7 @@ local function addButtonsToFrame()
                 resetTween:Play()
             end)
 
-            if emoteName == "Running Meme" then
+            if emoteName == "Runaway" then
                 currentValue = 0.1
                 updateSlider(currentValue)
             else
@@ -1455,27 +1557,22 @@ G2L["1"].Destroying:Connect(function()
     end
 end)
 
-local dragFrame = G2L["2"]
+local dragFrame = G2L["4"]
+local mainFrame = G2L["2"]
 local dragging = false
 local dragInput, dragStart, startPos
 local dragTween
 
-local function smoothDragTo(pos)
-    if dragTween then dragTween:Cancel() end
-    dragTween = TweenService:Create(
-        dragFrame,
-        TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Position = pos}
-    )
-    dragTween:Play()
-end
+local initialOffset
 
 dragFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 and not isDraggingSlider then
         dragging = true
         dragStart = input.Position
-        startPos = dragFrame.Position
-
+        startPos = mainFrame.Position
+        
+        initialOffset = startPos - UDim2.new(0, input.Position.X, 0, input.Position.Y)
+        
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -1492,12 +1589,34 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging and not isDraggingSlider then
-        local delta = input.Position - dragStart
-        local goal = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        if not dragStart or not startPos then
+            dragging = false
+            return
+        end
+        
+        local newPos = UDim2.new(
+            0, input.Position.X + initialOffset.X.Offset,
+            0, input.Position.Y + initialOffset.Y.Offset
         )
-        smoothDragTo(goal)
+        
+        if dragTween then dragTween:Cancel() end
+        dragTween = TweenService:Create(
+            mainFrame,
+            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = newPos}
+        )
+        dragTween:Play()
+    end
+end)
+
+local guiVisible = true
+local toggleKey = Enum.KeyCode.N
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == toggleKey then
+        guiVisible = not guiVisible
+        G2L["1"].Enabled = guiVisible
     end
 end)
 
