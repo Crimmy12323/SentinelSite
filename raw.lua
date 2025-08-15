@@ -935,7 +935,7 @@ if reanimsupport[game.PlaceId] then
         Title = "Load R15 Reanimation",
         Description = "Loads R15 reanimation script",
         Callback = function()
-            loadstring(game:HttpGet("https://ichfickdeinemutta.pages.dev/sizechanger.lua"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Crimmy12323/Reanim/refs/heads/main/Unconfiscated"))()
         end
     })
 else
