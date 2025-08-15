@@ -5,7 +5,17 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
+
+-- Wait for the game to load and player to be available
+local function waitForPlayer()
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    
+    return Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+end
+
+local LocalPlayer = waitForPlayer()
 
 -- [[ State for reanimation ]]
 local ghostEnabled = false
@@ -27,26 +37,34 @@ local bodyParts = {
     "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
 
--- [[ Adjusts the clone so its lowest part is on the ground ]]
-local function adjustCloneToGround(clone)
-    if not clone then return end
-    local lowestY = math.huge
-    for _, part in ipairs(clone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            local bottomY = part.Position.Y - (part.Size.Y * 0.5)
-            if bottomY < lowestY then
-                lowestY = bottomY
-            end
+--// do this first so it's ready to use :P
+local _storage_clone = nil
+local function _get_c()
+    return game:GetService("Players").LocalPlayer.Character
+end
+
+do
+    local char = _get_c()
+    char.Archivable = true
+
+    _storage_clone = char:Clone()
+
+    for _, obj in ipairs(_storage_clone:GetDescendants()) do
+        if obj:IsA("ForceField") then
+            obj:Destroy()
         end
     end
-    local offset = 0 - lowestY
-    if offset > 0 then
-        if clone.PrimaryPart then
-            clone:SetPrimaryPartCFrame(clone.PrimaryPart.CFrame + Vector3.new(0, offset, 0))
-        else
-            clone:TranslateBy(Vector3.new(0, offset, 0))
+
+    _storage_clone.Name = "temp"
+    _storage_clone.Parent = game.Lighting
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        local realRoot = char:FindFirstChild("HumanoidRootPart")
+        local cloneRoot = _storage_clone:FindFirstChild("HumanoidRootPart")
+        if realRoot and cloneRoot then
+            cloneRoot.CFrame = realRoot.CFrame
         end
-    end
+    end)
 end
 
 -- [[ Prevent GUI loss on respawn ]]
@@ -75,25 +93,37 @@ end
 -- [[ Update clone scale for size/width sliders ]]
 local function updateCloneScale()
     if not ghostClone then return end
+    
     for part, origSize in pairs(ghostOriginalSizes) do
         if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(origSize.X * cloneSize * cloneWidth, origSize.Y * cloneSize, origSize.Z * cloneSize)
+            local isMainTorso = part.Name == "UpperTorso" or part.Name == "LowerTorso"
+            part.Size = Vector3.new(
+                origSize.X * (isMainTorso and cloneWidth or cloneSize),
+                origSize.Y * cloneSize, 
+                origSize.Z * cloneSize
+            )
         end
     end
+
     for motor, orig in pairs(ghostOriginalMotorCFrames) do
         if motor and motor:IsA("Motor6D") then
             local c0 = orig.C0
             local c1 = orig.C1
+            
+            local isSideAttachment = motor.Name:find("Left") or motor.Name:find("Right")
+            
             local newC0 = CFrame.new(
-                c0.Position.X * cloneSize * cloneWidth,
+                c0.Position.X * (isSideAttachment and cloneWidth or cloneSize),
                 c0.Position.Y * cloneSize,
                 c0.Position.Z * cloneSize
             ) * CFrame.Angles(c0:ToEulerAnglesXYZ())
+            
             local newC1 = CFrame.new(
-                c1.Position.X * cloneSize * cloneWidth,
+                c1.Position.X * cloneSize,
                 c1.Position.Y * cloneSize,
                 c1.Position.Z * cloneSize
             ) * CFrame.Angles(c1:ToEulerAnglesXYZ())
+            
             motor.C0 = newC0
             motor.C1 = newC1
         end
@@ -103,8 +133,6 @@ local function updateCloneScale()
     if ghostHumanoid and ghostOriginalHipHeight then
         ghostHumanoid.HipHeight = ghostOriginalHipHeight * cloneSize
     end
-
-    adjustCloneToGround(ghostClone)
 end
 
 -- [[ Copy ragdoll part positions from clone to original ]]
@@ -125,28 +153,22 @@ end
 local function setGhostEnabled(newState)
     ghostEnabled = newState
 
-    if ghostEnabled then
+    if newState then
         local char = LocalPlayer.Character
-        if not char then
-            warn("No character found!")
-            return
-        end
+        if not char then warn("No character found!") return end
 
         local humanoid = char:FindFirstChildWhichIsA("Humanoid")
         local root = char:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not root then
-            warn("Character is missing either Humanoid or HumanoidRootPart!")
-            return
-        end
+        if not humanoid or not root then warn("Missing Humanoid or Root!") return end
 
         originalCharacter = char
         originalCFrame = root.CFrame
 
         char.Archivable = true
-        ghostClone = char:Clone()
+        ghostClone = _storage_clone:Clone()
         char.Archivable = false
 
-        local originalName = originalCharacter.Name
+        local originalName = char.Name
         ghostClone.Name = originalName .. "_clone"
 
         local ghostHumanoid = ghostClone:FindFirstChildWhichIsA("Humanoid")
@@ -157,27 +179,19 @@ local function setGhostEnabled(newState)
 
         if not ghostClone.PrimaryPart then
             local hrp = ghostClone:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                ghostClone.PrimaryPart = hrp
-            end
+            if hrp then ghostClone.PrimaryPart = hrp end
         end
 
-        -- [[ Make clone invisible ]]
         for _, part in ipairs(ghostClone:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Transparency = 1
-            end
+            if part:IsA("BasePart") then part.Transparency = 1 end
         end
         local head = ghostClone:FindFirstChild("Head")
         if head then
-            for _, child in ipairs(head:GetChildren()) do
-                if child:IsA("Decal") then
-                    child.Transparency = 1
-                end
+            for _, d in ipairs(head:GetChildren()) do
+                if d:IsA("Decal") then d.Transparency = 1 end
             end
         end
 
-        -- [[ Store original sizes and motor CFrames for scaling ]]
         ghostOriginalSizes = {}
         ghostOriginalMotorCFrames = {}
         for _, desc in ipairs(ghostClone:GetDescendants()) do
@@ -195,29 +209,28 @@ local function setGhostEnabled(newState)
         local animate = originalCharacter:FindFirstChild("Animate")
         if animate then
             originalAnimateScript = animate
-            originalAnimateScript.Disabled = true
-            originalAnimateScript.Parent = ghostClone
+            animate.Disabled = true
+            animate.Parent = ghostClone
         end
 
         preserveGuis()
         ghostClone.Parent = originalCharacter.Parent
-
-        adjustCloneToGround(ghostClone)
-
         LocalPlayer.Character = ghostClone
+
         if ghostHumanoid then
             Workspace.CurrentCamera.CameraSubject = ghostHumanoid
         end
         restoreGuis()
 
-        if originalAnimateScript then
-            originalAnimateScript.Disabled = false
-        end
+        if originalAnimateScript then originalAnimateScript.Disabled = false end
 
-        -- [[ Start ragdoll sync ]]
         task.delay(0, function()
             if not ghostEnabled then return end
-            ReplicatedStorage.RagdollEvent:FireServer()
+            if game.PlaceId == 6884319169 then
+                ReplicatedStorage.Ragdoll:FireServer("Ball")
+            else
+                ReplicatedStorage.Events.RagdollState:FireServer("true")
+            end
             task.delay(0, function()
                 if not ghostEnabled then return end
                 if updateConnection then updateConnection:Disconnect() end
@@ -226,16 +239,17 @@ local function setGhostEnabled(newState)
         end)
 
     else
-        if updateConnection then
-            updateConnection:Disconnect()
-            updateConnection = nil
-        end
-
+        if updateConnection then updateConnection:Disconnect() updateConnection = nil end
         if not originalCharacter or not ghostClone then return end
 
-        for i = 1, 3 do
-            ReplicatedStorage.UnragdollEvent:FireServer()
-            task.wait(0.1)
+        for i = 1, 2 do
+            if game.PlaceId == 6884319169 then
+                ReplicatedStorage.Unragdoll:FireServer()
+            else
+                local obBoolen1 = "false"
+                ReplicatedStorage.Events.RagdollState:FireServer("obBoolen1")
+            end
+            task.wait(0.01)
         end
 
         local origRoot = originalCharacter:FindFirstChild("HumanoidRootPart")
@@ -252,8 +266,8 @@ local function setGhostEnabled(newState)
 
         if origRoot then
             origRoot.CFrame = targetCFrame
-            origRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            origRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            origRoot.AssemblyLinearVelocity = Vector3.zero
+            origRoot.AssemblyAngularVelocity = Vector3.zero
         end
 
         local origHumanoid = originalCharacter:FindFirstChildWhichIsA("Humanoid")
@@ -262,18 +276,17 @@ local function setGhostEnabled(newState)
         if origHumanoid then
             Workspace.CurrentCamera.CameraSubject = origHumanoid
             origHumanoid.PlatformStand = false
-            origHumanoid:ChangeState(Enum.HumanoidStateType.Running)
             origHumanoid.Sit = false
-            origHumanoid.Jump = true
-            task.wait(0.03)
-            origHumanoid.Jump = false
-            -- Reset all part velocities
-            for _, part in ipairs(originalCharacter:GetChildren()) do
+            origHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            task.wait(0.06)
+            origHumanoid:ChangeState(Enum.HumanoidStateType.Running)
+            for _, part in ipairs(originalCharacter:GetDescendants()) do
                 if part:IsA("BasePart") then
-                    part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    part.AssemblyLinearVelocity = Vector3.zero
+                    part.AssemblyAngularVelocity = Vector3.zero
                 end
             end
+            if origRoot then origRoot.CFrame = targetCFrame end
         end
         restoreGuis()
 
@@ -390,7 +403,7 @@ local function playFakeAnimation(animationId)
     local part = Instance.new("Part")
     part.Size = Vector3.new(2048,0.1,2048)
     part.Anchored = true
-    part.Position = game.Players.LocalPlayer.Character.LowerTorso.Position + Vector3.new(0,-0.527,0)
+    part.Position = game.Players.LocalPlayer.Character.LowerTorso.Position + Vector3.new(0,-0.537,0)
     part.Transparency = 1
     part.Parent = workspace
     game.Players.LocalPlayer.Character.Humanoid.PlatformStand = true
@@ -898,7 +911,13 @@ if G2L["1b"].Text:lower() == "enable r15 reanimation" then
     G2L["1b"].TextColor3 = Color3.fromRGB(207, 207, 207)
 end
 
+local lastToggleTime = 0
+
 G2L["1c"].MouseButton1Click:Connect(function()
+    local now = tick()
+    if now - lastToggleTime < 1 then return end
+    lastToggleTime = now
+
     if ghostEnabled then
         setGhostEnabled(false)
         G2L["1b"].Text = "Enable R15 Reanimation"
@@ -1039,14 +1058,14 @@ local function createAddEmoteGUI(parentGUI, refreshCallback)
 
     local lastMousePos
     local lastGoalPos
-    local DRAG_SPEED = 15
+    local dragspeed = 15
 
     local function Update(dt)
         if not startPos then return end
         if not dragging and lastGoalPos then
             addEmoteFrame.Position = UDim2.new(
-                startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, lastGoalPos.X.Offset, dt * DRAG_SPEED),
-                startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, lastGoalPos.Y.Offset, dt * DRAG_SPEED)
+                startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, lastGoalPos.X.Offset, dt * dragspeed),
+                startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, lastGoalPos.Y.Offset, dt * dragspeed)
             )
             return
         end
@@ -1056,8 +1075,8 @@ local function createAddEmoteGUI(parentGUI, refreshCallback)
         local yGoal = startPos.Y.Offset - delta.Y
         lastGoalPos = UDim2.new(startPos.X.Scale, xGoal, startPos.Y.Scale, yGoal)
         addEmoteFrame.Position = UDim2.new(
-            startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, xGoal, dt * DRAG_SPEED),
-            startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, yGoal, dt * DRAG_SPEED)
+            startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, xGoal, dt * dragspeed),
+            startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, yGoal, dt * dragspeed)
         )
     end
 
@@ -1197,9 +1216,18 @@ loadAnimationsFromFile()
 
 local emoteKeybinds = {}
 
+local buttonConnections = {}
+local globalKeybindConnection = nil
+
 local function addButtonsToFrame()
     local parent = G2L["e"]
     parent:ClearAllChildren()
+
+    for _, conn in ipairs(buttonConnections) do
+        if conn then pcall(function() conn:Disconnect() end) end
+    end
+    table.clear(buttonConnections)
+
     local scrollingFrame = Instance.new("ScrollingFrame", parent)
     scrollingFrame.Name = "EmoteScrollingFrame"
     scrollingFrame.Size = UDim2.new(1, 0, 0.87, 0)
@@ -1236,7 +1264,7 @@ local function addButtonsToFrame()
         {"Infinite Dab", "74538409545244"},
         {"Jabba Switchway", "8229514367", false},
         {"Jubi Slide", "16570530493", false},
-        {"Lucid Dream", "108895351743195", false},
+        {"Lucid Dreams", "108895351743195", false},
         {"Look At Me", "129004554500202", false},
         {"Mr Blue Sky", "8603017969", false},
         {"Maximum Bounce", "8703876822", false},
@@ -1288,7 +1316,11 @@ local function addButtonsToFrame()
         {"Big Swastika", "94631359696320", false},
         {"Distraction Dance", "100885689396978", false},
         {"Peanut Butter JT", "71347001855728", true},
-        {"Fat Shit", "118865365595523", false}
+        {"EOYP FN", "95030874860037", false},
+        {"Lucid Dreams FN", "118481150583570", false},
+        {"Car Shearer", "7214158794", false},
+        {"James Dance", "116705115784027", false},
+        {"Pump The Jam", "7932729883", false},
     }
 
     for _, custom in ipairs(loadedAnimations.custom or {}) do
@@ -1309,7 +1341,7 @@ local function addButtonsToFrame()
         local keyBox = Instance.new("TextBox", scrollingFrame)
         keyBox.Name = "KeybindBox"
         keyBox.Size = UDim2.new(0, 32, 0, 32)
-        keyBox.Position = UDim2.new(0, 8, 0, yOffset)
+        keyBox.Position = UDim2.new(0, 12, 0, yOffset)
         keyBox.BackgroundColor3 = Color3.fromRGB(35, 35, 39)
         keyBox.Text = ""
         keyBox.TextSize = 14
@@ -1331,37 +1363,25 @@ local function addButtonsToFrame()
 
         keyBox.Focused:Connect(function()
             keyBox.Text = ""
-            if keyInputConn then
-                keyInputConn:Disconnect()
-                keyInputConn = nil
-            end
+            if keyInputConn then keyInputConn:Disconnect() keyInputConn = nil end
             keyInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
                 if gp then return end
                 if input.UserInputType == Enum.UserInputType.Keyboard then
                     emoteKeybinds[emoteId] = input.KeyCode
                     keyBox.Text = input.KeyCode.Name
-                    if keyInputConn then
-                        keyInputConn:Disconnect()
-                        keyInputConn = nil
-                    end
+                    if keyInputConn then keyInputConn:Disconnect() keyInputConn = nil end
                     keyBox:ReleaseFocus()
                 elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
                     emoteKeybinds[emoteId] = nil
                     keyBox.Text = ""
-                    if keyInputConn then
-                        keyInputConn:Disconnect()
-                        keyInputConn = nil
-                    end
+                    if keyInputConn then keyInputConn:Disconnect() keyInputConn = nil end
                     keyBox:ReleaseFocus()
                 end
             end)
         end)
 
         keyBox.FocusLost:Connect(function()
-            if keyInputConn then
-                keyInputConn:Disconnect()
-                keyInputConn = nil
-            end
+            if keyInputConn then keyInputConn:Disconnect() keyInputConn = nil end
             if emoteKeybinds[emoteId] then
                 keyBox.Text = emoteKeybinds[emoteId].Name
             else
@@ -1391,7 +1411,7 @@ local function addButtonsToFrame()
         local button = Instance.new("TextButton", scrollingFrame)
         button.Name = emoteName
         button.Size = UDim2.new(1, -68, 0, 32)
-        button.Position = UDim2.new(0, 48, 0, yOffset)
+        button.Position = UDim2.new(0, 52, 0, yOffset)
         button.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
         button.Text = emoteName
         button.TextSize = 17
@@ -1428,17 +1448,7 @@ local function addButtonsToFrame()
             labelCorner.CornerRadius = UDim.new(1, 0)
         end
 
-        button.MouseEnter:Connect(function()
-            local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
-            hoverTween:Play()
-        end)
-
-        button.MouseLeave:Connect(function()
-            local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
-            leaveTween:Play()
-        end)
-
-        button.MouseButton1Click:Connect(function()
+        local conn1 = button.MouseButton1Click:Connect(function()
             button.TextColor3 = Color3.fromRGB(244, 244, 244)
 
             local clickTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(57, 190, 249)})
@@ -1451,6 +1461,9 @@ local function addButtonsToFrame()
             if emoteName == "Runaway" then
                 currentValue = 0.1
                 updateSlider(currentValue)
+            elseif emoteName == "Lucid Dream FN" or emoteName == "EOYP FN" then
+                currentValue = 1.4
+                updateSlider(currentValue)
             else
                 currentValue = 1.1
                 updateSlider(currentValue)
@@ -1458,102 +1471,48 @@ local function addButtonsToFrame()
 
             toggleFakeAnimation(emoteId)
         end)
-
-        keyBox.Focused:Connect(function()
-            keyBox.Text = ""
-            if keyInputConn then
-                keyInputConn:Disconnect()
-                keyInputConn = nil
-            end
-            keyInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
-                if gp then return end
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    emoteKeybinds[emoteId] = input.KeyCode
-                    keyBox.Text = input.KeyCode.Name
-                    if keyInputConn then
-                        keyInputConn:Disconnect()
-                        keyInputConn = nil
-                    end
-                    keyBox:ReleaseFocus()
-                elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-                    emoteKeybinds[emoteId] = nil
-                    keyBox.Text = ""
-                    if keyInputConn then
-                        keyInputConn:Disconnect()
-                        keyInputConn = nil
-                    end
-                    keyBox:ReleaseFocus()
-                end
-            end)
-        end)
-
-        keyBox.FocusLost:Connect(function()
-            if keyInputConn then
-                keyInputConn:Disconnect()
-                keyInputConn = nil
-            end
-            if emoteKeybinds[emoteId] then
-                keyBox.Text = emoteKeybinds[emoteId].Name
-            else
-                keyBox.Text = ""
-            end
-        end)
-
-        if emoteKeybinds[emoteId] then
-            keyBox.Text = emoteKeybinds[emoteId].Name
-        else
-            keyBox.Text = ""
-        end
+        table.insert(buttonConnections, conn1)
 
         table.insert(buttons, {button = button, keyBox = keyBox})
         yOffset = yOffset + 40
     end
 
-    game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
-        if gp then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            for emoteId, keyCode in pairs(emoteKeybinds) do
-                if input.KeyCode == keyCode then
-                    toggleFakeAnimation(emoteId)
-                end
-            end
-        end
-    end)
-
     local searchBox = G2L["a"]
-    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local conn5 = searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local searchText = searchBox.Text:lower()
         yOffset = 10
-
         for _, pair in ipairs(buttons) do
             local button = pair.button
             local keyBox = pair.keyBox
             if button.Name:lower():find(searchText) then
                 button.Visible = true
                 keyBox.Visible = true
-                button.Position = UDim2.new(0, 48, 0, yOffset)
-                keyBox.Position = UDim2.new(0, 8, 0, yOffset)
+                button.Position = UDim2.new(0, 52, 0, yOffset)
+                keyBox.Position = UDim2.new(0, 12, 0, yOffset)
                 yOffset = yOffset + 40
             else
                 button.Visible = false
                 keyBox.Visible = false
             end
         end
-
         scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     end)
+    table.insert(buttonConnections, conn5)
 
     scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
 end
 
-local addEmotePopup = createAddEmoteGUI(G2L["1"], addButtonsToFrame)
-G2L["c"].MouseButton1Click:Connect(function()
-    addEmotePopup.toggle()
-end)
-
-G2L["1"].Destroying:Connect(function()
-    if ghostEnabled then
-        setGhostEnabled(false)
+if globalKeybindConnection then
+    globalKeybindConnection:Disconnect()
+end
+globalKeybindConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        for emoteId, keyCode in pairs(emoteKeybinds) do
+            if input.KeyCode == keyCode then
+                toggleFakeAnimation(emoteId)
+            end
+        end
     end
 end)
 
@@ -1622,4 +1581,9 @@ end)
 
 addButtonsToFrame()
 
-return G2L["1"], require;
+local addGUI = createAddEmoteGUI(G2L["1"], addButtonsToFrame)
+G2L["c"].MouseButton1Click:Connect(function()
+    addGUI.toggle()
+end)
+
+return G2L["1"], require
